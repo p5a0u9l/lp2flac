@@ -73,14 +73,17 @@ classdef F
             st = (0:size(x, 1))*size(x, 2)/fs;
             F.new_docked_fig();
             imagesc(f, st, x);
-            nf = median(x(:));
-            pk = max(x(:));
             colorbar(); colormap('hot');
-            caxis([nf + 9, pk + 2])
+            F.clim(x);
             axdrag(); grid on;
             xlabel('Hz'); ylabel('slow time');
         end
 
+        function clim(x)
+            nf = median(x(:));
+            pk = max(x(:));
+            caxis([nf + 9, pk + 2])
+        end
         function add_line(orientation, position)
             ax = gca();
             N = 100;
