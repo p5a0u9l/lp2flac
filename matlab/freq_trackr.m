@@ -11,7 +11,9 @@ function freq_trackr(filepath)
     slow_time = (0:framr.n_total - 1)*sdt;
 
     P = 20;
-    detects = zeros(P, 2, framr.n_total);
+    all_detects = zeros(P, 4, framr.n_total);
+    trackfile = TrackFile();
+    trackinit = false;
     for i = 1:framr.n_total - 1
         % spectrum for this frame
         X = fft(framr.x, n_fft);
@@ -24,16 +26,30 @@ function freq_trackr(filepath)
         raw_stft(i, :) = X2;
 
         % peak freqs for this frame
-        detects(:, :, i) = peak_detector(X2, f_grid, P);
+        detect0 = peak_detector(X2, f_grid, P, framr.i_frame);
+
+        if ~any(detect0(:))
+            framr.next();
+            continue;
+        end
+
+        % update tracker for this frame
+        if ~trackinit
+            trackinit = true;
+            trackfile.init(detect0);
+        else
+            trackfile.update(detect0);
+        end
 
         if mod(i, 100) == 0
             fprintf('detecting %d of %d...\n', i, framr.n_total);
         end
 
+        all_detects(:, :, i) = detect0;
         framr.next();
     end
-    plots(detects, f_grid, slow_time, raw_stft);
     keyboard
+    plots(all_detects, f_grid, slow_time, raw_stft);
 end
 
 function plots(detects, f_grid, slow_time, raw_stft)
@@ -68,9 +84,8 @@ function plots(detects, f_grid, slow_time, raw_stft)
     keyboard
 end
 
-function detects = peak_detector(y2, x_grid, n_pk)
+function detects = peak_detector(y2, x_grid, n_pk, iframe)
     % detect
-
     kernel = [ones(1, 4), zeros(1, 4), ones(1, 4)]';
     n_kernel = length(kernel);
     cfar = conv2(y2, kernel/n_kernel, 'same');
@@ -84,7 +99,7 @@ function detects = peak_detector(y2, x_grid, n_pk)
     rises = find(dpks == +1);
     falls = find(dpks == -1);
     n_rise = length(rises);
-    detects = zeros(n_rise, 2);
+    detects = zeros(n_rise, 3);
 
     % centroid
     for i = 1:n_rise
@@ -100,6 +115,7 @@ function detects = peak_detector(y2, x_grid, n_pk)
         detects(i, 1) = x_grid(idx)*y2(idx)/sum(y2(idx));
         detects(i, 2) = max(y2(idx));
         detects(i, 3) = max(y2(idx) - alpha*cfar(idx));
+        detects(i, 4) = iframe;
     end
 
     % down select to n_pk
@@ -108,6 +124,6 @@ function detects = peak_detector(y2, x_grid, n_pk)
     if n_rise >= n_pk
         detects = detects(sidx(1:n_pk), :);
     else
-        detects = [detects; zeros(n_pk - n_rise, 2)];
+        detects = [detects; zeros(n_pk - n_rise, 3)];
     end
 end
