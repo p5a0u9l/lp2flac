@@ -2,6 +2,19 @@ classdef F
     % a static class to encapsulate small functions
     %
     methods(Static)  % MATH
+
+        function y = minmax(x)
+            y = [min(x); max(x)];
+        end
+
+        function y = within(a, b)
+            y = a >= b(1) && a <= b(2);
+        end
+
+        function y = range(x)
+            y = diff(F.minmax(x));
+        end
+
         function y = argfunc(func, x)
             [~, y] = func(x);
         end
@@ -100,6 +113,7 @@ classdef F
         function f = new_docked_fig()
             f = figure();
             f.WindowStyle = 'docked';
+            grid on;
         end
     end
 end
